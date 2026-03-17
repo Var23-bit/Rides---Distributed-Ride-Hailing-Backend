@@ -1,0 +1,13 @@
+{
+  "name": "fare-service",
+  "version": "1.0.0",
+  "description": "Handles fare estimation and computation",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5"
+  }
+}

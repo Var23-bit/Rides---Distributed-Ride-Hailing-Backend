@@ -1,0 +1,12 @@
+{
+  "name": "payment-service",
+  "version": "1.0.0",
+  "description": "Consumes trip_ended events and processes simulated payments",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "shared": "file:../../shared"
+  }
+}

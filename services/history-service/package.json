@@ -1,0 +1,12 @@
+{
+  "name": "history-service",
+  "version": "1.0.0",
+  "description": "Consumes all trip_events and persists them into the event_log table",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "shared": "file:../../shared"
+  }
+}

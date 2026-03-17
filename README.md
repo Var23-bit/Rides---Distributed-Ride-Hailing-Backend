@@ -61,7 +61,7 @@ Make sure you have the following installed:
 
 ### Clone the Repository
 ```bash
-git clone https://github.com/your-username/ride-hailing-backend.git
+git clone  https://github.com/Var23-bit/Distributed-Ride-Hailing-Backend.git
 cd ride-hailing-backend
 ```
 

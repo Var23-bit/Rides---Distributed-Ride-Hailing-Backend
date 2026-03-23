@@ -1,0 +1,111 @@
+# Render deployment configuration for the ride-hailing backend.
+#
+# Instructions:
+# 1) Push this repo to GitHub/GitLab/Bitbucket.
+# 2) Create a Render account and link your repo.
+# 3) Render will detect this file and create the services defined below.
+#
+# NOTE: Adjust `region`, `plan`, and branch settings as needed.
+
+services:
+  - type: web_service
+    name: gateway
+    env: docker
+    plan: free
+    region: oregon
+    branch: main
+    dockerfilePath: services/gateway/Dockerfile
+    envVars:
+      - key: PORT
+        value: "80"
+      - key: RIDE_SERVICE_URL
+        value: "http://ride-service:3001"
+      - key: LOCATION_SERVICE_URL
+        value: "http://location-service:3002"
+      - key: FARE_SERVICE_URL
+        value: "http://fare-service:3003"
+
+  - type: web_service
+    name: ride-service
+    env: docker
+    plan: free
+    region: oregon
+    branch: main
+    dockerfilePath: services/ride-service/Dockerfile
+    envVars:
+      - key: PORT
+        value: "3001"
+      - key: LOCATION_SERVICE_URL
+        value: "http://location-service:3002"
+      - key: FARE_SERVICE_URL
+        value: "http://fare-service:3003"
+      - key: DATABASE_URL
+        fromDatabase: ridehail
+      - key: REDIS_URL
+        fromRedis: ride-redis
+
+  - type: web_service
+    name: location-service
+    env: docker
+    plan: free
+    region: oregon
+    branch: main
+    dockerfilePath: services/location-service/Dockerfile
+    envVars:
+      - key: PORT
+        value: "3002"
+      - key: DATABASE_URL
+        fromDatabase: ridehail
+      - key: REDIS_URL
+        fromRedis: ride-redis
+
+  - type: web_service
+    name: fare-service
+    env: docker
+    plan: free
+    region: oregon
+    branch: main
+    dockerfilePath: services/fare-service/Dockerfile
+    envVars:
+      - key: PORT
+        value: "3003"
+      - key: DATABASE_URL
+        fromDatabase: ridehail
+
+  - type: background_worker
+    name: payment-service
+    env: docker
+    plan: free
+    region: oregon
+    branch: main
+    dockerfilePath: services/payment-service/Dockerfile
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase: ridehail
+      - key: REDIS_URL
+        fromRedis: ride-redis
+
+  - type: background_worker
+    name: history-service
+    env: docker
+    plan: free
+    region: oregon
+    branch: main
+    dockerfilePath: services/history-service/Dockerfile
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase: ridehail
+      - key: REDIS_URL
+        fromRedis: ride-redis
+
+# Managed backing services
+
+databases:
+  - name: ridehail
+    plan: starter
+    region: oregon
+
+redis:
+  - name: ride-redis
+    plan: starter
+    region: oregon

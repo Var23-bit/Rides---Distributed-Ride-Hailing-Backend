@@ -179,6 +179,9 @@ app.patch('/rides/:id/status', async (req, res) => {
   }
 });
 
+// Root route
+app.get('/', (req, res) => res.status(200).json({ message: 'Ride-Hailing Backend API is running successfully' }));
+
 // Basic healthcheck
 app.get('/health', (req, res) => res.status(200).send('OK'));
 

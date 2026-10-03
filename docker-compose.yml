@@ -1,0 +1,144 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgis/postgis:15-3.3
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-ridehail}
+    ports:
+      - "${POSTGRES_PORT:-5434}:5432"
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-admin} -d ${POSTGRES_DB:-ridehail}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  auth-service:
+    build:
+      context: .
+      dockerfile: ./services/auth-service/Dockerfile
+    environment:
+      PORT: ${AUTH_SERVICE_PORT:-3010}
+      DATABASE_URL: ${DATABASE_URL:-postgres://${POSTGRES_USER:-admin}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-ridehail}}
+      JWT_SECRET: ${JWT_SECRET}
+      ACCESS_TOKEN_TTL: ${ACCESS_TOKEN_TTL:-15m}
+      REFRESH_TOKEN_TTL: ${REFRESH_TOKEN_TTL:-30d}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  gateway:
+    build:
+      context: .
+      dockerfile: ./services/gateway/Dockerfile
+    ports:
+      - "${GATEWAY_PORT:-8081}:80"
+    environment:
+      PORT: 80
+      RIDE_SERVICE_URL: ${RIDE_SERVICE_URL:-http://ride-service:3001}
+      LOCATION_SERVICE_URL: ${LOCATION_SERVICE_URL:-http://location-service:3002}
+      FARE_SERVICE_URL: ${FARE_SERVICE_URL:-http://fare-service:3003}
+      PAYMENT_SERVICE_URL: ${PAYMENT_SERVICE_URL:-http://payment-service:3008}
+      JWT_SECRET: ${JWT_SECRET}
+    depends_on:
+      - auth-service
+      - ride-service
+      - location-service
+      - fare-service
+      - payment-service
+
+  ride-service:
+    build:
+      context: .
+      dockerfile: ./services/ride-service/Dockerfile
+    environment:
+      PORT: ${RIDE_SERVICE_PORT:-3001}
+      DATABASE_URL: ${DATABASE_URL:-postgres://${POSTGRES_USER:-admin}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-ridehail}}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+      LOCATION_SERVICE_URL: ${LOCATION_SERVICE_URL:-http://location-service:3002}
+      FARE_SERVICE_URL: ${FARE_SERVICE_URL:-http://fare-service:3003}
+      JWT_SECRET: ${JWT_SECRET}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  location-service:
+    build:
+      context: .
+      dockerfile: ./services/location-service/Dockerfile
+    environment:
+      PORT: ${LOCATION_SERVICE_PORT:-3002}
+      DATABASE_URL: ${DATABASE_URL:-postgres://${POSTGRES_USER:-admin}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-ridehail}}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+      JWT_SECRET: ${JWT_SECRET}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  fare-service:
+    build:
+      context: .
+      dockerfile: ./services/fare-service/Dockerfile
+    environment:
+      PORT: ${FARE_SERVICE_PORT:-3003}
+      DATABASE_URL: ${DATABASE_URL:-postgres://${POSTGRES_USER:-admin}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-ridehail}}
+      JWT_SECRET: ${JWT_SECRET}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  payment-service:
+    build:
+      context: .
+      dockerfile: ./services/payment-service/Dockerfile
+    environment:
+      PORT: ${PAYMENT_SERVICE_PORT:-3008}
+      DATABASE_URL: ${DATABASE_URL:-postgres://${POSTGRES_USER:-admin}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-ridehail}}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+      JWT_SECRET: ${JWT_SECRET}
+      RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID}
+      RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET}
+      RAZORPAY_WEBHOOK_SECRET: ${RAZORPAY_WEBHOOK_SECRET}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  history-service:
+    build:
+      context: .
+      dockerfile: ./services/history-service/Dockerfile
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgres://${POSTGRES_USER:-admin}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-ridehail}}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+      JWT_SECRET: ${JWT_SECRET}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  redis_data:
